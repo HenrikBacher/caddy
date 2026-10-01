@@ -196,7 +196,17 @@ func chownIfNeeded(path string, uid, gid int) error {
 		return nil
 	}
 	logf("INF", "Taking ownership of [%s].", path)
-	return os.Lchown(path, uid, gid)
+	return permHint(os.Lchown(path, uid, gid))
+}
+
+// permHint explains EPERM from the root-only setup steps: the container was
+// started as root but with capabilities dropped (e.g. --cap-drop ALL).
+func permHint(err error) error {
+	if errors.Is(err, syscall.EPERM) {
+		return fmt.Errorf("%w: started as root without the capabilities to switch to PUID:PGID; "+
+			"run with --user PUID:PGID instead, or add --cap-add CHOWN --cap-add SETUID --cap-add SETGID", err)
+	}
+	return err
 }
 
 // dropPrivileges switches every thread to uid:gid, with gid as the only
@@ -206,13 +216,13 @@ func dropPrivileges(uid, gid int) error {
 		return nil
 	}
 	if err := syscall.Setgroups([]int{gid}); err != nil {
-		return fmt.Errorf("setgroups: %w", err)
+		return permHint(fmt.Errorf("setgroups: %w", err))
 	}
 	if err := syscall.Setgid(gid); err != nil {
-		return fmt.Errorf("setgid: %w", err)
+		return permHint(fmt.Errorf("setgid: %w", err))
 	}
 	if err := syscall.Setuid(uid); err != nil {
-		return fmt.Errorf("setuid: %w", err)
+		return permHint(fmt.Errorf("setuid: %w", err))
 	}
 	return nil
 }
