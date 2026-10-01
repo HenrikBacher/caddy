@@ -114,7 +114,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build (amd64, for testing)
+      - name: Build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -127,7 +127,6 @@ jobs:
             CLOUDFLARE_VERSION=${{ needs.check.outputs.cloudflare_version }}
             RATELIMIT_VERSION=${{ needs.check.outputs.ratelimit_version }}
           tags: ${{ steps.meta.outputs.image }}:test
-          cache-to: type=gha,mode=max
 
       - name: Test
         env:
@@ -146,12 +145,12 @@ jobs:
           go run golang.org/x/vuln/cmd/govulncheck@latest -mode=binary caddy-bin > govulncheck.txt || true
           { echo '<details><summary>govulncheck</summary>'; echo; echo '```'; cat govulncheck.txt; echo '```'; echo '</details>'; } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Build and push (amd64, arm64)
+      - name: Push (reuses the tested build from the local cache)
         id: push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           provenance: mode=max
           sbom: true
@@ -162,7 +161,6 @@ jobs:
             CLOUDFLARE_VERSION=${{ needs.check.outputs.cloudflare_version }}
             RATELIMIT_VERSION=${{ needs.check.outputs.ratelimit_version }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
           labels: |
             org.opencontainers.image.title=caddy
             org.opencontainers.image.description=Hardened drop-in replacement for ghcr.io/hotio/caddy

@@ -30,7 +30,7 @@ needs to change, and the existing `/config` is used as-is.
   `CUSTOM_BUILD`. Setting any of them stops the container instead of quietly
   running without a VPN.
 - **Supply chain**: Caddy is built from source with a pinned `xcaddy`, images
-  are multi-arch (amd64, arm64), and every push carries an SBOM, SLSA
+  are amd64 only, and every push carries an SBOM, SLSA
   provenance and a keyless cosign signature. Workflow actions are pinned by
   commit SHA and kept current by Dependabot.
 
