@@ -1,0 +1,112 @@
+name: build
+
+on:
+  schedule:
+    - cron: '17 4 * * 1' # Mondays 04:17 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Caddy ref to build (tag, branch or commit). Empty = newest vX.Y.Z tag.
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-${{ inputs.ref || 'default' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve Caddy ref and image tags
+        id: meta
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          ref="${INPUT_REF}"
+          if [ -z "$ref" ]; then
+            # Newest stable tag. Uses git tags rather than GitHub releases, so a
+            # version is picked up even if upstream's release publishing lags.
+            ref=$(git ls-remote --tags --refs https://github.com/caddyserver/caddy.git 'v2.*' \
+              | sed 's#.*refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          date=$(date -u +%Y%m%d)
+          if [[ "$ref" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            version="${BASH_REMATCH[1]}"
+            tags="$image:latest,$image:$version,$image:$version-$date"
+          else
+            slug=$(tr -c 'a-zA-Z0-9._-' '-' <<<"$ref" | sed 's/-*$//')
+            tags="$image:$slug,$image:$slug-$date"
+          fi
+          {
+            echo "ref=$ref"
+            echo "image=$image"
+            echo "tags=$tags"
+          } >> "$GITHUB_OUTPUT"
+          echo "Building Caddy $ref -> $tags" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          pull: true
+          load: true
+          build-args: CADDY_REF=${{ steps.meta.outputs.ref }}
+          tags: ${{ steps.meta.outputs.image }}:test
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.ref }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Test
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}:test
+        run: |
+          set -euo pipefail
+          caddy() { docker run --rm -v "$PWD/test:/test:ro" --entrypoint /app/caddy "$IMAGE" "$@"; }
+          caddy version | tee -a "$GITHUB_STEP_SUMMARY"
+          caddy list-modules > modules.txt
+          grep -qx dns.providers.cloudflare modules.txt
+          grep -qx http.handlers.rate_limit modules.txt
+          caddy adapt --config /test/Caddyfile --adapter caddyfile > /dev/null
+
+          # Start the full s6 stack and check the default Caddyfile is served. Curl
+          # from inside: the default config aborts non-private client IPs.
+          docker run -d --name smoke "$IMAGE"
+          for _ in $(seq 30); do
+            docker exec smoke curl -fsS -o /dev/null http://localhost:8080 && ok=1 && break
+            sleep 2
+          done
+          docker logs smoke
+          docker rm -f smoke
+          [ "${ok:-}" = 1 ]
+
+      - name: Push
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}:test
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          for tag in ${TAGS//,/ }; do
+            docker tag "$IMAGE" "$tag"
+            docker push "$tag"
+          done

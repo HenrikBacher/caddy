@@ -1,0 +1,21 @@
+# Exercises the plugins and global options the real config depends on.
+{
+	order rate_limit before basic_auth
+	dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	ech ech.example.com
+	cert_issuer acme {
+		profile shortlived
+	}
+}
+
+example.com {
+	rate_limit {
+		zone test {
+			key {remote_host}
+			events 10
+			window 1m
+		}
+	}
+	respond "ok"
+}
