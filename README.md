@@ -1,13 +1,63 @@
 # caddy
 
-Weekly rebuild of [hotio/caddy](https://github.com/hotio/caddy) with the newest
-Caddy tag, for when hotio's image lags behind upstream.
+Hardened drop-in replacement for [hotio/caddy](https://github.com/hotio/caddy),
+rebuilt weekly with the newest Caddy tag.
 
-The image is `ghcr.io/hotio/caddy:release` with only `/app/caddy` replaced by a
-fresh `xcaddy` build with the same plugins (`caddy-dns/cloudflare`,
-`mholt/caddy-ratelimit`). Env vars, volumes, ports and s6 services are
-identical, so it is a drop-in replacement: change the Unraid template's
-Repository to `ghcr.io/<owner>/caddy:latest`.
+Change the Unraid template's (or compose file's) image from
+`ghcr.io/hotio/caddy:release` to `ghcr.io/henrikbacher/caddy:latest`. Nothing else
+needs to change, and the existing `/config` is used as-is.
+
+## What stays the same
+
+| | |
+|---|---|
+| Plugins | `caddy-dns/cloudflare`, `mholt/caddy-ratelimit` |
+| Ports | `8080` (HTTP), `8443` (HTTPS, plus `8443/udp` for HTTP/3) |
+| Volume | `/config`: `Caddyfile`, certificates and autosave in `/config/caddy` |
+| Env | `PUID`, `PGID`, `UMASK`, `TZ`, `FILE__<VAR>` secrets |
+| Startup | default `Caddyfile` installed if missing, `caddy fmt --overwrite`, `caddy run` |
+| Paths | `/app/caddy`, `/app/www`, `caddy` on `PATH` (`docker exec caddy caddy reload ...` works) |
+
+## What's different
+
+- **Base image**: `gcr.io/distroless/static-debian13` instead of Alpine + s6.
+  No shell, no package manager, no `curl`/`bash`/`jq`; 57 MB instead of 139 MB.
+- **Entrypoint**: a ~200-line static Go program ([`init/main.go`](init/main.go))
+  replaces the s6 scripts. It applies `UMASK`, resolves `FILE__` secrets,
+  chowns `/config` and `/config/Caddyfile` to `PUID:PGID`, drops to that user
+  with `PGID` as its only group, and execs Caddy as PID 1.
+- **Unsupported**: `VPN_ENABLED`, `PRIVOXY_ENABLED`, `UNBOUND_ENABLED` and
+  `CUSTOM_BUILD`. Setting any of them stops the container instead of quietly
+  running without a VPN.
+- **Supply chain**: Caddy is built from source with a pinned `xcaddy`, images
+  are multi-arch (amd64, arm64), and every push carries an SBOM, SLSA
+  provenance and a keyless cosign signature. Workflow actions are pinned by
+  commit SHA and kept current by Dependabot.
+
+## Running it locked down
+
+The default mode starts as root only long enough to chown `/config` and drop
+privileges, like hotio. If `/config` is already owned by the right user, skip
+that entirely:
+
+```sh
+docker run -d --name caddy \
+  --user 99:100 --read-only --cap-drop ALL --security-opt no-new-privileges \
+  -p 80:8080 -p 443:8443 -p 443:8443/udp \
+  -v /mnt/user/appdata/caddy:/config \
+  ghcr.io/henrikbacher/caddy:latest
+```
+
+On Unraid, put `--user 99:100 --read-only --cap-drop ALL --security-opt no-new-privileges`
+in the template's *Extra Parameters*. `PUID`/`PGID` are ignored in this mode.
+
+## Verifying an image
+
+```sh
+cosign verify ghcr.io/henrikbacher/caddy:latest \
+  --certificate-identity-regexp '^https://github.com/HenrikBacher/caddy/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
 
 ## Tags
 
@@ -18,9 +68,19 @@ Repository to `ghcr.io/<owner>/caddy:latest`.
 | `master`, `master-20261001` | manual run with `ref: master` |
 
 Builds run Mondays 04:17 UTC, on every push to `main`, and on demand from the
-Actions tab (`ref` input takes any Caddy tag, branch or commit). Each build is
-tested (plugins present, test Caddyfile adapts, s6 stack serves HTTP) before
-anything is pushed.
+Actions tab (`ref` input takes any Caddy tag, branch or commit). Base images
+are referenced by tag and pulled fresh on each build, so the weekly run also
+picks up Go and distroless updates. Each build runs [`test/smoke.sh`](test/smoke.sh)
+before anything is pushed: plugins load, the test Caddyfile adapts, there is no
+shell, the hotio startup path (PUID 99/PGID 100, default Caddyfile, `FILE__`
+secret, `/config/caddy` layout) works, and the locked-down mode serves HTTP.
+
+Run the tests locally with:
+
+```sh
+docker build --build-arg CADDY_REF=v2.11.6 -t caddy:test .
+test/smoke.sh caddy:test   # DOCKER=podman works too
+```
 
 GitHub disables scheduled workflows in public repos after 60 days without
 commits; re-enable from the Actions tab if that happens.
