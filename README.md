@@ -29,7 +29,7 @@ needs to change, and the existing `/config` is used as-is.
 - **Unsupported**: `VPN_ENABLED`, `PRIVOXY_ENABLED`, `UNBOUND_ENABLED` and
   `CUSTOM_BUILD`. Setting any of them stops the container instead of quietly
   running without a VPN.
-- **Supply chain**: Caddy is built from source with a pinned `xcaddy`, images
+- **Supply chain**: Caddy is built from source with plain `go build` (no xcaddy), images
   are amd64 only, and every push carries an SBOM, SLSA
   provenance and a keyless cosign signature. Workflow actions are pinned by
   commit SHA and kept current by Dependabot.
