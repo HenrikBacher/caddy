@@ -26,9 +26,6 @@ needs to change, and the existing `/config` is used as-is.
   replaces the s6 scripts. It applies `UMASK`, resolves `FILE__` secrets,
   chowns `/config` and `/config/Caddyfile` to `PUID:PGID`, drops to that user
   with `PGID` as its only group, and execs Caddy as PID 1.
-- **Extra plugin**: [`caddy-dns/bunny`](https://github.com/caddy-dns/bunny)
-  for ACME DNS challenges against [bunny.net DNS](https://bunny.net/dns/)
-  (`dns bunny {env.BUNNY_API_KEY}`).
 - **Unsupported**: `VPN_ENABLED`, `PRIVOXY_ENABLED`, `UNBOUND_ENABLED` and
   `CUSTOM_BUILD`. Setting any of them stops the container instead of quietly
   running without a VPN.

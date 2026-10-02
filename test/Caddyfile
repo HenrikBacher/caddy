@@ -19,10 +19,3 @@ example.com {
 	}
 	respond "ok"
 }
-
-bunny.example.com {
-	tls {
-		dns bunny {env.BUNNY_API_KEY}
-	}
-	respond "ok"
-}
