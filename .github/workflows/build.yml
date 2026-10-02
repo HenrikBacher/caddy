@@ -2,8 +2,8 @@ name: build
 
 on:
   schedule:
-    # Daily, but only builds when an input changed (see the check job).
-    - cron: '7 0 * * *' # 00:07 UTC
+    # Hourly, but only builds when an input changed (see the check job).
+    - cron: '7 * * * *' # :07 past every hour, UTC
   push:
     branches: [main]
   workflow_dispatch:

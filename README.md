@@ -67,7 +67,7 @@ cosign verify ghcr.io/henrikbacher/caddy:latest \
 | `2.11.6-20261001` | immutable build of that version on that date |
 | `master`, `master-20261001` | manual run with `ref: master` |
 
-A scheduled check runs daily at 00:07 UTC.
+A scheduled check runs hourly at :07 past the hour (UTC).
 [`scripts/resolve-inputs.sh`](scripts/resolve-inputs.sh) resolves the newest
 Caddy tag, the Go version in `golang:alpine`, the `distroless/static-debian13`
 digest and the latest plugin versions, and compares them with the
