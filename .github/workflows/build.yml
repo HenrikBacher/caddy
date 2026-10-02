@@ -34,7 +34,7 @@ jobs:
       base_image: ${{ steps.inputs.outputs.base_image }}
       base_digest: ${{ steps.inputs.outputs.base_digest }}
       cloudflare_version: ${{ steps.inputs.outputs.cloudflare_version }}
-      hetzner_version: ${{ steps.inputs.outputs.hetzner_version }}
+      desec_version: ${{ steps.inputs.outputs.desec_version }}
       ratelimit_version: ${{ steps.inputs.outputs.ratelimit_version }}
       inputs: ${{ steps.inputs.outputs.inputs }}
     steps:
@@ -126,7 +126,7 @@ jobs:
             GO_IMAGE=${{ needs.check.outputs.go_image }}
             BASE_IMAGE=${{ needs.check.outputs.base_image }}
             CLOUDFLARE_VERSION=${{ needs.check.outputs.cloudflare_version }}
-            HETZNER_VERSION=${{ needs.check.outputs.hetzner_version }}
+            DESEC_VERSION=${{ needs.check.outputs.desec_version }}
             RATELIMIT_VERSION=${{ needs.check.outputs.ratelimit_version }}
           tags: ${{ steps.meta.outputs.image }}:test
 
@@ -161,7 +161,7 @@ jobs:
             GO_IMAGE=${{ needs.check.outputs.go_image }}
             BASE_IMAGE=${{ needs.check.outputs.base_image }}
             CLOUDFLARE_VERSION=${{ needs.check.outputs.cloudflare_version }}
-            HETZNER_VERSION=${{ needs.check.outputs.hetzner_version }}
+            DESEC_VERSION=${{ needs.check.outputs.desec_version }}
             RATELIMIT_VERSION=${{ needs.check.outputs.ratelimit_version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |

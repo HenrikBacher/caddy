@@ -20,10 +20,11 @@ example.com {
 	respond "ok"
 }
 
-hetzner.example.com {
+desec.example.com {
 	tls {
-		dns hetzner {env.HETZNER_API_TOKEN}
-		propagation_delay 30s
+		dns desec {
+			token {env.DESEC_TOKEN}
+		}
 	}
 	respond "ok"
 }
