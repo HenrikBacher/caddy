@@ -7,7 +7,7 @@
 #   base_image         distroless static pinned by digest (runtime base)
 #   base_digest        digest of base_image
 #   cloudflare_version caddy-dns/cloudflare latest version
-#   desec_version      caddy-dns/desec latest version
+#   hetzner_version    caddy-dns/hetzner/v2 latest version
 #   ratelimit_version  mholt/caddy-ratelimit latest version
 #   inputs             one-line summary of the above that affects the output
 #                      binary/image; stored as an image label and compared on
@@ -76,7 +76,7 @@ go_version=$(amd64_config registry-1.docker.io "$GO_REPO" "$GO_TAG" \
   | jq -r '.config.Env[] | select(startswith("GOLANG_VERSION=")) | sub("GOLANG_VERSION="; "")')
 base_digest=$(digest gcr.io "$BASE_REPO" "$BASE_TAG")
 cloudflare=$(latest_module github.com/caddy-dns/cloudflare)
-desec=$(latest_module github.com/caddy-dns/desec)
+hetzner=$(latest_module github.com/caddy-dns/hetzner/v2)
 ratelimit=$(latest_module github.com/mholt/caddy-ratelimit)
 
 published=""
@@ -94,8 +94,8 @@ go_image=golang:$GO_TAG@$go_digest
 base_image=gcr.io/$BASE_REPO@$base_digest
 base_digest=$base_digest
 cloudflare_version=$cloudflare
-desec_version=$desec
+hetzner_version=$hetzner
 ratelimit_version=$ratelimit
-inputs=caddy=$ref go=$go_version base=$base_digest cloudflare=$cloudflare desec=$desec ratelimit=$ratelimit
+inputs=caddy=$ref go=$go_version base=$base_digest cloudflare=$cloudflare hetzner=$hetzner ratelimit=$ratelimit
 published_inputs=$published
 OUT
