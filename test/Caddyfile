@@ -19,12 +19,3 @@ example.com {
 	}
 	respond "ok"
 }
-
-desec.example.com {
-	tls {
-		dns desec {
-			token {env.DESEC_TOKEN}
-		}
-	}
-	respond "ok"
-}
