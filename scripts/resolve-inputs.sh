@@ -7,6 +7,10 @@
 #   base_image         distroless static pinned by digest (runtime base)
 #   base_digest        digest of base_image
 #   cloudflare_version caddy-dns/cloudflare latest version
+#   bunny_version      caddy-dns/bunny latest version
+#   libdns_bunny_version
+#                      libdns/bunny latest version; caddy-dns/bunny pins an
+#                      older one without HTTPS records, which ECH needs
 #   ratelimit_version  mholt/caddy-ratelimit latest version
 #   inputs             one-line summary of the above that affects the output
 #                      binary/image; stored as an image label and compared on
@@ -75,6 +79,8 @@ go_version=$(amd64_config registry-1.docker.io "$GO_REPO" "$GO_TAG" \
   | jq -r '.config.Env[] | select(startswith("GOLANG_VERSION=")) | sub("GOLANG_VERSION="; "")')
 base_digest=$(digest gcr.io "$BASE_REPO" "$BASE_TAG")
 cloudflare=$(latest_module github.com/caddy-dns/cloudflare)
+bunny=$(latest_module github.com/caddy-dns/bunny)
+libdns_bunny=$(latest_module github.com/libdns/bunny)
 ratelimit=$(latest_module github.com/mholt/caddy-ratelimit)
 
 published=""
@@ -92,7 +98,9 @@ go_image=golang:$GO_TAG@$go_digest
 base_image=gcr.io/$BASE_REPO@$base_digest
 base_digest=$base_digest
 cloudflare_version=$cloudflare
+bunny_version=$bunny
+libdns_bunny_version=$libdns_bunny
 ratelimit_version=$ratelimit
-inputs=caddy=$ref go=$go_version base=$base_digest cloudflare=$cloudflare ratelimit=$ratelimit
+inputs=caddy=$ref go=$go_version base=$base_digest cloudflare=$cloudflare bunny=$bunny libdns_bunny=$libdns_bunny ratelimit=$ratelimit
 published_inputs=$published
 OUT

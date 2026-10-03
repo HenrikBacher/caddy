@@ -12,6 +12,8 @@ ARG HOTIO_IMAGE=ghcr.io/hotio/caddy:release
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS builder
 ARG CADDY_REF
 ARG CLOUDFLARE_VERSION=latest
+ARG BUNNY_VERSION=latest
+ARG LIBDNS_BUNNY_VERSION=latest
 ARG RATELIMIT_VERSION=latest
 ARG TARGETOS
 ARG TARGETARCH
@@ -25,6 +27,8 @@ RUN cd /src/caddy && go mod init caddy \
  && go get "github.com/caddyserver/caddy/v2@${CADDY_REF:?CADDY_REF is required}" \
         "github.com/mholt/caddy-ratelimit@${RATELIMIT_VERSION}" \
         "github.com/caddy-dns/cloudflare@${CLOUDFLARE_VERSION}" \
+        "github.com/caddy-dns/bunny@${BUNNY_VERSION}" \
+        "github.com/libdns/bunny@${LIBDNS_BUNNY_VERSION}" \
  && go build -mod=mod -trimpath -ldflags="-s -w" -tags nobadger,nomysql,nopgx -o /rootfs/app/caddy .
 COPY init/ /src/init/
 RUN cd /src/init && go build -trimpath -ldflags="-s -w" -o /rootfs/init . \
