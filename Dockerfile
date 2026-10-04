@@ -18,15 +18,11 @@ ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH
 # What xcaddy does, without installing it. Resolving Caddy and the plugins in
-# one go get makes a plugin that needs a different Caddy fail the build
-# instead of silently changing the Caddy version. -mod=mod records checksums
-# for exactly the packages compiled; the tags match xcaddy's.
-COPY caddy/main.go /src/caddy/
-RUN cd /src/caddy && go mod init caddy \
- && go get "github.com/caddyserver/caddy/v2@${CADDY_REF:?CADDY_REF is required}" \
-        "github.com/mholt/caddy-ratelimit@${RATELIMIT_VERSION}" \
-        "github.com/caddy-dns/bunny@${BUNNY_VERSION}" \
-        "github.com/libdns/bunny@${LIBDNS_BUNNY_VERSION}" \
+# one go get (caddy/deps.sh) makes a plugin that needs a different Caddy fail
+# the build instead of silently changing the Caddy version. -mod=mod records
+# checksums for exactly the packages compiled; the tags match xcaddy's.
+COPY caddy/ /src/caddy/
+RUN cd /src/caddy && sh deps.sh \
  && go build -mod=mod -trimpath -ldflags="-s -w" -tags nobadger,nomysql,nopgx -o /rootfs/app/caddy .
 COPY init/ /src/init/
 RUN cd /src/init && go build -trimpath -ldflags="-s -w" -o /rootfs/init . \

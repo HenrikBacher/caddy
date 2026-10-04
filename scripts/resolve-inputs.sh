@@ -11,13 +11,19 @@
 #                      libdns/bunny latest version; caddy-dns/bunny pins an
 #                      older one without HTTPS records, which ECH needs
 #   ratelimit_version  mholt/caddy-ratelimit latest version
+#   deps               hash of the full module list caddy/deps.sh resolves
+#                      (dependencies at their newest patch release), so a
+#                      fix in an indirect dependency triggers a rebuild
 #   inputs             one-line summary of the above that affects the output
 #                      binary/image; stored as an image label and compared on
 #                      scheduled runs to decide whether to rebuild
 #   published_inputs   the inputs label of $IMAGE:latest ("" if none)
 #
 # Usage: IMAGE=ghcr.io/owner/caddy scripts/resolve-inputs.sh [caddy-ref]
+# Needs docker (or DOCKER=podman) to run caddy/deps.sh in the Go image.
 set -euo pipefail
+cd "$(dirname "$0")/.."
+DOCKER=${DOCKER:-docker}
 
 GO_REPO=library/golang GO_TAG=alpine
 BASE_REPO=distroless/static-debian13 BASE_TAG=latest
@@ -81,6 +87,12 @@ bunny=$(latest_module github.com/caddy-dns/bunny)
 libdns_bunny=$(latest_module github.com/libdns/bunny)
 ratelimit=$(latest_module github.com/mholt/caddy-ratelimit)
 
+# Same resolution as the Dockerfile, in the same Go image.
+deps=$($DOCKER run --rm -i -e CADDY_REF="$ref" -e RATELIMIT_VERSION="$ratelimit" \
+    -e BUNNY_VERSION="$bunny" -e LIBDNS_BUNNY_VERSION="$libdns_bunny" \
+    "golang:$GO_TAG@$go_digest" sh -c 'mkdir /w && cd /w && sh -s >&2 && go list -m all' \
+    <caddy/deps.sh | sha256sum | cut -c1-16)
+
 published=""
 if [ -n "${IMAGE:-}" ]; then
   registry=${IMAGE%%/*} repo=${IMAGE#*/}
@@ -98,6 +110,6 @@ base_digest=$base_digest
 bunny_version=$bunny
 libdns_bunny_version=$libdns_bunny
 ratelimit_version=$ratelimit
-inputs=caddy=$ref go=$go_version base=$base_digest bunny=$bunny libdns_bunny=$libdns_bunny ratelimit=$ratelimit
+inputs=caddy=$ref go=$go_version base=$base_digest bunny=$bunny libdns_bunny=$libdns_bunny ratelimit=$ratelimit deps=$deps
 published_inputs=$published
 OUT

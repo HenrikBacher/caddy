@@ -75,7 +75,9 @@ cosign verify ghcr.io/henrikbacher/caddy:latest \
 A scheduled check runs hourly at :07 past the hour (UTC).
 [`scripts/resolve-inputs.sh`](scripts/resolve-inputs.sh) resolves the newest
 Caddy tag, the Go version in `golang:alpine`, the `distroless/static-debian13`
-digest and the latest plugin versions, and compares them with the
+digest, the latest plugin versions and a hash of the full Go module list (every
+dependency raised to its newest patch release, so upstream security fixes
+land without waiting for Caddy or a plugin to bump them), and compares them with the
 `io.github.henrikbacher.caddy.inputs` label on the published `:latest` image.
 The build runs only when something changed, and uses exactly those resolved
 versions (base images pinned by digest). Pushes to `main` and manual runs from
