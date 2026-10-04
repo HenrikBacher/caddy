@@ -1,8 +1,8 @@
 # Exercises the plugins and global options the real config depends on.
 {
 	order rate_limit before basic_auth
-	dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	dns bunny {env.BUNNY_API_KEY}
+	acme_dns bunny {env.BUNNY_API_KEY}
 	ech ech.example.com
 	cert_issuer acme {
 		profile shortlived

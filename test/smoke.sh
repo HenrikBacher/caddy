@@ -31,7 +31,6 @@ get() { $DOCKER run --rm --network "container:$1" "$CURL" -fsS --retry 15 --retr
 
 caddy version
 caddy list-modules >modules.txt
-grep -qx dns.providers.cloudflare modules.txt || fail "cloudflare DNS module missing"
 grep -qx dns.providers.bunny modules.txt || fail "bunny DNS module missing"
 grep -qx http.handlers.rate_limit modules.txt || fail "rate_limit module missing"
 rm -f modules.txt
