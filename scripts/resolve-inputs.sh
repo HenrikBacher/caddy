@@ -6,10 +6,7 @@
 #   go_image           golang:alpine pinned by digest (builder)
 #   base_image         distroless static pinned by digest (runtime base)
 #   base_digest        digest of base_image
-#   bunny_version      caddy-dns/bunny latest version
-#   libdns_bunny_version
-#                      libdns/bunny latest version; caddy-dns/bunny pins an
-#                      older one without HTTPS records, which ECH needs
+#   desec_version      caddy-dns/desec latest version
 #   ratelimit_version  mholt/caddy-ratelimit latest version
 #   deps               hash of the full module list caddy/deps.sh resolves
 #                      (dependencies at their newest patch release), so a
@@ -83,13 +80,12 @@ go_digest=$(digest registry-1.docker.io "$GO_REPO" "$GO_TAG")
 go_version=$(amd64_config registry-1.docker.io "$GO_REPO" "$GO_TAG" \
   | jq -r '.config.Env[] | select(startswith("GOLANG_VERSION=")) | sub("GOLANG_VERSION="; "")')
 base_digest=$(digest gcr.io "$BASE_REPO" "$BASE_TAG")
-bunny=$(latest_module github.com/caddy-dns/bunny)
-libdns_bunny=$(latest_module github.com/libdns/bunny)
+desec=$(latest_module github.com/caddy-dns/desec)
 ratelimit=$(latest_module github.com/mholt/caddy-ratelimit)
 
 # Same resolution as the Dockerfile, in the same Go image.
 deps=$($DOCKER run --rm -i -e CADDY_REF="$ref" -e RATELIMIT_VERSION="$ratelimit" \
-    -e BUNNY_VERSION="$bunny" -e LIBDNS_BUNNY_VERSION="$libdns_bunny" \
+    -e DESEC_VERSION="$desec" \
     "golang:$GO_TAG@$go_digest" sh -c 'mkdir /w && cd /w && sh -s >&2 && go list -m all' \
     <caddy/deps.sh | sha256sum | cut -c1-16)
 
@@ -107,9 +103,8 @@ ref=$ref
 go_image=golang:$GO_TAG@$go_digest
 base_image=gcr.io/$BASE_REPO@$base_digest
 base_digest=$base_digest
-bunny_version=$bunny
-libdns_bunny_version=$libdns_bunny
+desec_version=$desec
 ratelimit_version=$ratelimit
-inputs=caddy=$ref go=$go_version base=$base_digest bunny=$bunny libdns_bunny=$libdns_bunny ratelimit=$ratelimit deps=$deps
+inputs=caddy=$ref go=$go_version base=$base_digest desec=$desec ratelimit=$ratelimit deps=$deps
 published_inputs=$published
 OUT

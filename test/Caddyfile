@@ -1,8 +1,12 @@
 # Exercises the plugins and global options the real config depends on.
 {
 	order rate_limit before basic_auth
-	dns bunny {env.BUNNY_API_KEY}
-	acme_dns bunny {env.BUNNY_API_KEY}
+	dns desec {
+		token {env.DESEC_TOKEN}
+	}
+	acme_dns desec {
+		token {env.DESEC_TOKEN}
+	}
 	ech ech.example.com
 	cert_issuer acme {
 		profile shortlived
@@ -20,9 +24,11 @@ example.com {
 	respond "ok"
 }
 
-bunny.example.com {
+desec.example.com {
 	tls {
-		dns bunny {env.BUNNY_API_KEY}
+		dns desec {
+			token {env.DESEC_TOKEN}
+		}
 	}
 	respond "ok"
 }
