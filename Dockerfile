@@ -7,7 +7,6 @@
 # scripts/resolve-inputs.sh; the defaults are for local builds.
 ARG GO_IMAGE=golang:alpine
 ARG BASE_IMAGE=gcr.io/distroless/static-debian13
-ARG HOTIO_IMAGE=ghcr.io/hotio/caddy:release
 
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS builder
 ARG CADDY_REF
@@ -28,13 +27,9 @@ RUN cd /src/init && go build -trimpath -ldflags="-s -w" -o /rootfs/init . \
  && mkdir -p /rootfs/usr/local/bin /rootfs/config \
  && ln -s /app/caddy /rootfs/usr/local/bin/caddy
 
-# Default Caddyfile and landing page, taken verbatim from hotio's image.
-FROM ${HOTIO_IMAGE} AS hotio
-
 FROM ${BASE_IMAGE}
 COPY --from=builder /rootfs/ /
-COPY --from=hotio /app/Caddyfile /app/Caddyfile
-COPY --from=hotio /app/www/ /app/www/
+COPY app/ /app/
 ENV APP_DIR=/app \
     CONFIG_DIR=/config \
     XDG_CONFIG_HOME=/config/.config \

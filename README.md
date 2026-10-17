@@ -16,7 +16,7 @@ needs to change, and the existing `/config` is used as-is.
 | Volume | `/config`: `Caddyfile`, certificates and autosave in `/config/caddy` |
 | Env | `PUID`, `PGID`, `UMASK`, `TZ`, `FILE__<VAR>` secrets |
 | Startup | default `Caddyfile` installed if missing, `caddy fmt --overwrite`, `caddy run` |
-| Paths | `/app/caddy`, `/app/www`, `caddy` on `PATH` (`docker exec caddy caddy reload ...` works) |
+| Paths | `/app/caddy`, `caddy` on `PATH` (`docker exec caddy caddy reload ...` works) |
 
 ## What's different
 

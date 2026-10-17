@@ -49,8 +49,8 @@ chmod 644 "$tmp/secret"
 c=caddy-smoke-root-$id; containers+=("$c")
 $DOCKER run -d --name "$c" -v "$vol:/config" -v "$tmp/secret:/run/secret:ro" \
   -e PUID=99 -e PGID=100 -e UMASK=002 -e FILE__CF_TOKEN=/run/secret "$IMAGE" >/dev/null
-get "$c" | grep -qi caddy || fail "default page not served"
-ok "default Caddyfile serves /app/www"
+get "$c" | grep -qx "Caddy is working" || fail "default Caddyfile not served"
+ok "default Caddyfile installed and served"
 
 [ "$(in_vol stat -c %u:%g /config /config/Caddyfile | sort -u)" = 99:100 ] || fail "/config not owned by 99:100"
 in_vol test -d /config/caddy || fail "Caddy data dir not at /config/caddy"
