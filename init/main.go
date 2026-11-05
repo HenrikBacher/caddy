@@ -2,6 +2,7 @@
 // init scripts with the parts that matter for Caddy, then execs Caddy as PID 1:
 //
 //   - FILE__NAME=/path sets NAME to the contents of /path
+//   - the Caddy, plugin and Go versions of /app/caddy are logged
 //   - UMASK is applied
 //   - /config/Caddyfile is installed from /app/Caddyfile if missing
 //   - when started as root, /config and /config/Caddyfile are chowned to
@@ -18,12 +19,16 @@ package main
 
 import (
 	"bytes"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -60,6 +65,7 @@ func run() error {
 	configDir := env("CONFIG_DIR", "/config")
 	caddyfile := configDir + "/Caddyfile"
 	caddy := appDir + "/caddy"
+	logVersions(caddy)
 
 	umask, err := strconv.ParseUint(env("UMASK", "002"), 8, 32)
 	if err != nil {
@@ -116,6 +122,44 @@ func run() error {
 	}
 	logf("INF", "Starting %s", strings.Join(argv, " "))
 	return syscall.Exec(caddy, argv, os.Environ())
+}
+
+// logVersions logs the versions /app/caddy was built with: Caddy and Go from
+// the build info Go embeds in every binary (what `go version -m` prints), and
+// every plugin from Caddy's own list of its non-standard modules.
+func logVersions(caddy string) {
+	bi, err := buildinfo.ReadFile(caddy)
+	if err != nil {
+		logf("WRN", "cannot read build info from [%s]: %v", caddy, err)
+		return
+	}
+	msg := "Caddy"
+	for _, d := range bi.Deps {
+		if d.Path == "github.com/caddyserver/caddy/v2" {
+			msg += " " + d.Version
+		}
+	}
+
+	// Lines are "module-id version package"; a plugin package can provide
+	// several modules, so each package is listed once.
+	out, err := exec.Command(caddy, "list-modules", "--skip-standard", "--versions", "--packages").Output()
+	if err != nil {
+		logf("WRN", "cannot list Caddy plugins: %v", err)
+	}
+	var plugins []string
+	for _, line := range strings.Split(string(out), "\n") {
+		f := strings.Fields(line)
+		if len(f) != 3 || strings.HasPrefix(line, " ") { // skip the indented totals
+			continue
+		}
+		if p := path.Base(f[2]) + " " + f[1]; !slices.Contains(plugins, p) {
+			plugins = append(plugins, p)
+		}
+	}
+	if len(plugins) > 0 {
+		msg += " with " + strings.Join(plugins, ", ")
+	}
+	logf("INF", "%s (%s %s/%s)", msg, bi.GoVersion, runtime.GOOS, runtime.GOARCH)
 }
 
 // loadFileSecrets implements hotio's FILE__ convention: FILE__FOO=/run/secrets/foo
