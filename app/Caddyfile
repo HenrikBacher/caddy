@@ -1,4 +1,7 @@
 {
+	# No admin API: nothing sharing the network namespace (host networking,
+	# sidecars) can rewrite the config. Restart the container to apply changes.
+	admin off
 	http_port 8080
 	https_port 8443
 }

@@ -6,8 +6,9 @@ set -euo pipefail
 
 IMAGE=${1:?usage: $0 IMAGE}
 DOCKER=${DOCKER:-$(command -v docker || command -v podman)}
-HELPER=${HELPER:-docker.io/library/busybox:stable}
-CURL=${CURL:-docker.io/curlimages/curl:latest}
+# Pinned by digest: these run next to the image under test.
+HELPER=${HELPER:-docker.io/library/busybox:stable@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662}
+CURL=${CURL:-docker.io/curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93}
 cd "$(dirname "$0")"
 
 id=$$
@@ -65,8 +66,12 @@ uids=$(pid1 awk '/^Uid:/{print $2, $3, $4, $5}' /proc/1/status)
 pid1 sh -c 'tr "\0" "\n" </proc/1/environ' | grep -qx CF_TOKEN=secret-value || fail "FILE__CF_TOKEN not loaded"
 ok "caddy runs as 99 with FILE__ secret loaded"
 
-$DOCKER exec "$c" caddy reload --config /config/Caddyfile --adapter caddyfile
-ok "docker exec caddy reload works"
+if $DOCKER run --rm --network "container:$c" "$CURL" -fsS -m 5 http://localhost:2019/config/ >/dev/null 2>&1; then
+  fail "admin API is reachable on localhost:2019"
+fi
+$DOCKER exec "$c" caddy validate --config /config/Caddyfile --adapter caddyfile >/dev/null 2>&1 \
+  || fail "docker exec caddy validate failed"
+ok "admin API disabled, docker exec caddy validate works"
 $DOCKER stop "$c" >/dev/null
 
 # Hardened mode: fixed non-root user, read-only rootfs, no capabilities.

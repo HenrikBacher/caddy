@@ -16,7 +16,7 @@ needs to change, and the existing `/config` is used as-is.
 | Volume | `/config`: `Caddyfile`, certificates and autosave in `/config/caddy` |
 | Env | `PUID`, `PGID`, `UMASK`, `TZ`, `FILE__<VAR>` secrets |
 | Startup | default `Caddyfile` installed if missing, `caddy fmt --overwrite`, `caddy run` |
-| Paths | `/app/caddy`, `caddy` on `PATH` (`docker exec caddy caddy reload ...` works) |
+| Paths | `/app/caddy`, `caddy` on `PATH` (`docker exec caddy caddy validate ...` works) |
 
 ## What's different
 
@@ -30,12 +30,21 @@ needs to change, and the existing `/config` is used as-is.
   replaces `caddy-dns/cloudflare`, for ACME DNS challenges against [deSEC](https://desec.io/)
   (`dns desec { token {env.DESEC_TOKEN} }`). deSEC supports the HTTPS records
   Caddy publishes for ECH.
+- **Admin API off**: the default `Caddyfile` has `admin off`, so nothing that
+  shares the container's network namespace (host networking, sidecars) can
+  rewrite the config through `localhost:2019`. The cost is no `caddy reload`:
+  restart the container to apply changes. Only new installs get the default;
+  for an existing `/config/Caddyfile`, add `admin off` to the global options
+  block yourself.
 - **Unsupported**: `VPN_ENABLED`, `PRIVOXY_ENABLED`, `UNBOUND_ENABLED` and
   `CUSTOM_BUILD`. Setting any of them stops the container instead of quietly
   running without a VPN.
 - **Supply chain**: Caddy is built from source with plain `go build` (no xcaddy), images
   are amd64 only, and every push carries an SBOM, SLSA
-  provenance and a keyless cosign signature. Workflow actions are pinned by
+  provenance and a keyless cosign signature. The image is built once and
+  tested in a job with no write permissions; a separate job pushes that exact
+  archive (same digest) and signs it, so the registry and signing credentials
+  never sit next to the build or the tests. Workflow actions are pinned by
   commit SHA and kept current by Dependabot.
 
 ## Running it locked down
